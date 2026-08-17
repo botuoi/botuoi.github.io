@@ -1,0 +1,38 @@
+#!/bin/bash
+# BoTuoi OLS — bộ nạp công khai.
+#   curl -sO https://botuoi.github.io/get && bash get <TOKEN> [wp]
+# Bộ nạp này KHÔNG chứa bí mật: nó chỉ dùng token bạn đưa để tải trình cài thật
+# từ kho riêng (private), rồi bàn giao cho trình cài đó.
+set -u
+
+TOKEN="${1:-${BOTUOI_TOKEN:-}}"
+WP_ARG="${2:-}"
+REPO="${BOTUOI_REPO:-botuoi/botuoi-ols-panel}"
+BRANCH="${BOTUOI_BRANCH:-main}"
+
+
+if [ "$(id -u)" != 0 ]; then
+  echo "Cần chạy bằng quyền root (dùng: sudo -i rồi chạy lại)."
+  exit 1
+fi
+
+if [ -z "$TOKEN" ]; then
+  cat <<'HD'
+Thiếu token đọc kho riêng.
+
+  curl -sO https://botuoi.github.io/get && bash get ghp_xxxxx
+  # kèm WordPress:
+  curl -sO https://botuoi.github.io/get && bash get ghp_xxxxx wp
+HD
+  exit 1
+fi
+
+echo "[BoTuoi OLS] Đang lấy trình cài từ kho riêng..."
+if ! curl -fsSL --proto '=https' -H "Authorization: Bearer $TOKEN" \
+     "https://raw.githubusercontent.com/$REPO/$BRANCH/install" -o /root/botuoi-install; then
+  echo "[BoTuoi OLS] Không tải được trình cài. Kiểm tra: token còn hạn? token có quyền đọc kho $REPO?"
+  exit 1
+fi
+
+rm -f get
+exec bash /root/botuoi-install "$TOKEN" "$WP_ARG"
